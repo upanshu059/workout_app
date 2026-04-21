@@ -33,11 +33,13 @@ except ImportError:
     ANDROID = False
 
 # Try pyttsx3 as fallback for non-Android (desktop testing)
-try:
-    import pyttsx3
-    HAS_PYTTSX3 = True
-except ImportError:
-    HAS_PYTTSX3 = False
+# try:
+#     import pyttsx3
+#     HAS_PYTTSX3 = True
+# except ImportError:
+#     HAS_PYTTSX3 = False
+
+HAS_PYTTSX3 = False
 
 try:
     import pandas as pd
@@ -66,30 +68,29 @@ DARK_TEXT = get_color_from_hex("#0E0E12")
 # --------------------------
 class TTSEngine:
     def __init__(self):
-        self.engine = None
+        self.tts = None
         if ANDROID:
-            self.engine = TTS()
-        elif HAS_PYTTSX3:
-            self.engine = pyttsx3.init()
-            self.engine.setProperty('rate', 150)
+            try:
+                from jnius import autoclass
+                self.TTS = autoclass('android.speech.tts.TextToSpeech')
+                self.context = autoclass('org.kivy.android.PythonActivity').mActivity
+                self.tts = self.TTS(self.context, None)
+            except Exception as e:
+                print(f"[TTS init error] {e}")
 
     def speak(self, text):
-        if self.engine is None:
-            print(f"[TTS] {text}")
-            return
         try:
-            if ANDROID:
-                self.engine.speak(text)
-            elif HAS_PYTTSX3:
-                self.engine.say(text)
-                self.engine.runAndWait()
+            if self.tts:
+                self.tts.speak(text, self.TTS.QUEUE_FLUSH, None, None)
+            else:
+                print(f"[TTS] {text}")
         except Exception as e:
             print(f"[TTS error] {e}")
 
     def stop(self):
         try:
-            if self.engine and not ANDROID and HAS_PYTTSX3:
-                self.engine.stop()
+            if self.tts:
+                self.tts.stop()
         except Exception:
             pass
 
