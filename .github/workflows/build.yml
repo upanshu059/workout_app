@@ -27,10 +27,21 @@ jobs:
       - name: Install buildozer
         run: pip install buildozer cython virtualenv
 
+      - name: Accept Android SDK licenses
+        run: |
+          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
+
       - name: Build APK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           buildozer android debug 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: List output files
+        run: find . -name "*.apk" 2>/dev/null && ls -la bin/ 2>/dev/null || echo "No APK or bin folder found"
         continue-on-error: true
 
       - name: Upload full build log
