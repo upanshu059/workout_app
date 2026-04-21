@@ -33,6 +33,7 @@ try:
     HAS_PANDAS = True
 except ImportError:
     HAS_PANDAS = False
+    
 
 # --------------------------
 # CONFIG
@@ -312,7 +313,13 @@ class WorkoutCoachLayout(BoxLayout):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._bg, size=self._bg)
 
-        self.df = load_workouts()
+        # self.df = load_workouts()
+        try:
+            self.df = load_workouts()
+        except Exception as e:
+            print(f"[CSV load error] {e}")
+            import io, csv
+            self.df = list(csv.DictReader(io.StringIO(SAMPLE_CSV)))
         self.workout_ids = get_workout_ids(self.df)
         self.tts = TTSEngine()
         self.workout_thread = None
