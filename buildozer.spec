@@ -15,7 +15,7 @@ version = 1.0
 requirements = python3,kivy==2.3.0,pillow
 
 # Android-specific
-android.minapi = 34
+android.minapi = 21
 android.api = 34
 android.archs = arm64-v8a
 
