@@ -28,12 +28,13 @@ try:
 except ImportError:
     ANDROID = False
 
-try:
-    import pandas as pd
-    HAS_PANDAS = True
-except ImportError:
-    HAS_PANDAS = False
-    
+# try:
+#     import pandas as pd
+#     HAS_PANDAS = True
+# except ImportError:
+#     HAS_PANDAS = False
+
+HAS_PANDAS = False    
 
 # --------------------------
 # CONFIG
