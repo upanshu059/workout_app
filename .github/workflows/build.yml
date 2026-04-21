@@ -27,30 +27,39 @@ jobs:
       - name: Install buildozer
         run: pip install buildozer cython virtualenv
 
-      - name: Accept Android SDK licenses
+      - name: Run buildozer once to download SDK
         run: |
-          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          timeout 300 buildozer android debug || true
+
+      - name: Accept licenses and install build-tools into buildozer SDK
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          SDKMANAGER=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
+          if [ -f "$SDKMANAGER" ]; then
+            yes | $SDKMANAGER --licenses
+            $SDKMANAGER "build-tools;34.0.0"
+          else
+            echo "sdkmanager not found at $SDKMANAGER"
+            find $HOME/.buildozer -name "sdkmanager" 2>/dev/null
+          fi
 
       - name: Build APK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           buildozer android debug 2>&1 | tee build.log
-        continue-on-error: true
 
       - name: List output files
-        run: find . -name "*.apk" 2>/dev/null && ls -la bin/ 2>/dev/null || echo "No APK or bin folder found"
+        run: find . -name "*.apk" 2>/dev/null || echo "No APK found"
         continue-on-error: true
 
-      - name: Upload full build log
+      - name: Upload build log
         uses: actions/upload-artifact@v4
         with:
           name: build-log
           path: build.log
 
-      - name: Upload APK if successful
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: workout-coach-apk
