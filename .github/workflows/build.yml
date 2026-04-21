@@ -22,18 +22,24 @@ jobs:
           sudo apt install -y \
             openjdk-17-jdk zip unzip libffi-dev libssl-dev \
             autoconf libtool pkg-config cmake zlib1g-dev \
-            libltdl-dev libgstreamer1.0-dev
+            libltdl-dev
 
-      - name: Install buildozer and dependencies
-        run: |
-          pip install buildozer cython virtualenv
+      - name: Install buildozer
+        run: pip install buildozer cython virtualenv
 
       - name: Build APK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          yes | buildozer android debug 2>&1
+          buildozer android debug 2>&1 | tee build.log
+        continue-on-error: true
 
-      - name: Upload APK
+      - name: Upload full build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+
+      - name: Upload APK if successful
         uses: actions/upload-artifact@v4
         with:
           name: workout-coach-apk
