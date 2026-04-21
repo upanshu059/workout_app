@@ -24,33 +24,15 @@ jobs:
             autoconf libtool pkg-config cmake zlib1g-dev \
             libltdl-dev
 
-      - name: Install buildozer
-        run: pip install buildozer cython virtualenv
-
-      - name: Run buildozer once to download SDK
+      - name: Install buildozer pinned version
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          timeout 300 buildozer android debug || true
-
-      - name: Accept licenses and install build-tools into buildozer SDK
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          SDKMANAGER=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
-          if [ -f "$SDKMANAGER" ]; then
-            yes | $SDKMANAGER --licenses
-            $SDKMANAGER "build-tools;34.0.0"
-          else
-            echo "sdkmanager not found at $SDKMANAGER"
-            find $HOME/.buildozer -name "sdkmanager" 2>/dev/null
-          fi
+          pip install cython virtualenv
+          pip install git+https://github.com/kivy/buildozer.git@master
 
       - name: Build APK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          buildozer android debug 2>&1 | tee build.log
-
-      - name: List output files
-        run: find . -name "*.apk" 2>/dev/null || echo "No APK found"
+          yes | buildozer android debug 2>&1 | tee build.log
         continue-on-error: true
 
       - name: Upload build log
