@@ -12,7 +12,7 @@ source.include_exts = py,png,jpg,kv,atlas,mp3,csv
 version = 1.0
 
 # Requirements — core + pandas fallback
-requirements = python3,kivy==2.3.0,pillow
+requirements = python3,kivy==2.3.0,pillow,pandas,pyjnius
 
 # Android-specific
 android.minapi = 21
