@@ -22,7 +22,7 @@ jobs:
           sudo apt install -y \
             openjdk-17-jdk zip unzip libffi-dev libssl-dev \
             autoconf libtool pkg-config cmake zlib1g-dev \
-            libltdl-dev
+            libltdl-dev gettext
 
       - name: Install buildozer pinned version
         run: |
