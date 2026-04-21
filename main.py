@@ -314,23 +314,33 @@ class WorkoutCoachLayout(BoxLayout):
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self._bg, size=self._bg)
 
-        # self.df = load_workouts()
+        self.workout_thread = None
+        self.bell = None
+
+        # Safe CSV load
         try:
             self.df = load_workouts()
+            self.workout_ids = get_workout_ids(self.df)
         except Exception as e:
-            print(f"[CSV load error] {e}")
+            print(f"[STARTUP CSV ERROR] {e}")
             import io, csv
             self.df = list(csv.DictReader(io.StringIO(SAMPLE_CSV)))
-        self.workout_ids = get_workout_ids(self.df)
-        self.tts = TTSEngine()
-        self.workout_thread = None
+            self.workout_ids = get_workout_ids(self.df)
 
+        # Safe TTS init
+        try:
+            self.tts = TTSEngine()
+        except Exception as e:
+            print(f"[STARTUP TTS ERROR] {e}")
+            self.tts = None
+
+        # Safe bell load
         try:
             from kivy.core.audio import SoundLoader
             bell_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bell.mp3")
             self.bell = SoundLoader.load(bell_path)
-        except Exception:
-            self.bell = None
+        except Exception as e:
+            print(f"[STARTUP BELL ERROR] {e}")
 
         self._build_ui()
 
@@ -471,7 +481,8 @@ class WorkoutCoachLayout(BoxLayout):
             self.workout_thread.running = False
             self.workout_thread.paused = False
             self.workout_thread.skip_phase = True
-        self.tts.stop()
+        if self.tts:
+            self.tts.stop()
         Clock.schedule_once(lambda dt: self._reset_ui(), 0.3)
 
     def _reset_ui(self):
@@ -498,7 +509,8 @@ class WorkoutCoachLayout(BoxLayout):
         Clock.schedule_once(u, 0)
 
     def _on_speak(self, text):
-        Clock.schedule_once(lambda dt: self.tts.speak(text), 0)
+        if self.tts:
+            Clock.schedule_once(lambda dt: self.tts.speak(text), 0)
 
 
 # --------------------------
