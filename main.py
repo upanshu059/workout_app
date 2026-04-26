@@ -59,22 +59,238 @@ REST_TYPE      = 100
 # --------------------------
 # SAMPLE CSV
 # --------------------------
-SAMPLE_CSV = """workout_id,workout_name,type,exercise,sets,reps,time
-1,Power Push,Warm Up,Jumping Jacks,2,,30
-1,Power Push,Warm Up,Arm Circles,2,,20
-1,Power Push,Strength,Push Ups,3,15,
-1,Power Push,Strength,Squats,3,20,
-1,Power Push,Strength,Lunges,3,12,
-1,Power Push,Core,Plank,3,,45
-1,Power Push,Core,Crunches,3,20,
-1,Power Push,Cool Down,Hamstring Stretch,1,,30
-2,HIIT Inferno,Warm Up,High Knees,2,,30
-2,HIIT Inferno,Warm Up,Hip Circles,2,,20
-2,HIIT Inferno,HIIT,Burpees,4,10,
-2,HIIT Inferno,HIIT,Mountain Climbers,4,,30
-2,HIIT Inferno,HIIT,Jump Squats,4,15,
-2,HIIT Inferno,Core,Leg Raises,3,15,
-2,HIIT Inferno,Core,Russian Twists,3,20,
+SAMPLE_CSV = """workout_id,type,exercise,reps,time,sets,workout_name
+1,Warmup,T-Spine,,30,2,Full body - Core
+1,Warmup,LTW,,30,2,Full body - Core
+1,Warmup,High Plank,,30,2,Full body - Core
+1,Warmup,Knee Pull,,30,2,Full body - Core
+1,Main Workout,Squats,12,,4,Full body - Core
+1,Main Workout,Pushups,12,,4,Full body - Core
+1,Main Workout,Plank,,40,4,Full body - Core
+1,Main Workout,Side to side floor touch,,40,4,Full body - Core
+1,Finisher,Russian Twists,,30,3,Full body - Core
+1,Finisher,Jumping Jacks,,30,3,Full body - Core
+1,Finisher,Hollow Hold,,30,3,Full body - Core
+2,Warmup,Open book,,40,2,Chest - Back - Shoulders
+2,Warmup,LTW,,40,2,Chest - Back - Shoulders
+2,Warmup,Prone angels,,40,2,Chest - Back - Shoulders
+2,Warmup,Weighted Deadbugs,,40,2,Chest - Back - Shoulders
+2,Main Workout,Pushups,12,,4,Chest - Back - Shoulders
+2,Main Workout,Jumping Ts,,40,4,Chest - Back - Shoulders
+2,Main Workout,Rows,12,,4,Chest - Back - Shoulders
+2,Main Workout,Superman Up and Down,12,,4,Chest - Back - Shoulders
+2,Finisher,Side plank - R,,30,3,Chest - Back - Shoulders
+2,Finisher,Shoulder press,,30,3,Chest - Back - Shoulders
+2,Finisher,Side plank - L,,30,3,Chest - Back - Shoulders
+3,Warmup,Hip openers,,40,2,Legs
+3,Warmup,WSG,,40,2,Legs
+3,Warmup,Squat to hip up,,40,2,Legs
+3,Warmup,Glute bridges,,40,2,Legs
+3,Main Workout,Squats Reach,15,,4,Legs
+3,Main Workout,Burpees,12,,4,Legs
+3,Main Workout,Deadlifts,15,,4,Legs
+3,Main Workout,Split Stance Lunges,24,,4,Legs
+3,Finisher,Calf Raises,,150,3,Legs
+3,Finisher,High Plank Jack,,40,3,Legs
+3,Finisher,Beast Hold,,40,3,Legs
+4,Warmup,Open book,,30,2,Legs with pushups
+4,Warmup,Knee to chest,,30,2,Legs with pushups
+4,Warmup,Prone Angels,,30,2,Legs with pushups
+4,Warmup,Glute bridges,,30,2,Legs with pushups
+4,Main Workout,Jump Squats,15,,4,Legs with pushups
+4,Main Workout,Pushups,15,,4,Legs with pushups
+4,Main Workout,Skater Jumps,24,,4,Legs with pushups
+4,Main Workout,Deadbugs,18,,4,Legs with pushups
+4,Finisher,Mountain Climbers,,40,3,Legs with pushups
+4,Finisher,Russian Twists,,40,3,Legs with pushups
+4,Finisher,Plank,,40,3,Legs with pushups
+5,Warmup,Knee to chest,,30,2,Legs and Core
+5,Warmup,Kneeling T spine,,30,2,Legs and Core
+5,Warmup,Prone Angels,,30,2,Legs and Core
+5,Warmup,Hip openers,,30,2,Legs and Core
+5,Activation,YTW,,30,2,Legs and Core
+5,Activation,Hip Bridges,,30,2,Legs and Core
+5,Activation,High Plank Hold,,30,2,Legs and Core
+5,Main Workout,Thrusters,,40,4,Legs and Core
+5,Main Workout,Single leg hip bridge,,40,4,Legs and Core
+5,Main Workout,Broad Jumps to Burpees,,40,4,Legs and Core
+5,Main Workout,Single leg hip bridge,,40,4,Legs and Core
+5,Finisher,Situps,,30,3,Legs and Core
+5,Finisher,Hollow Hold,,30,3,Legs and Core
+6,Warmup,Knee to chest,,30,2,Explosive Legs
+6,Warmup,Bird dog,,30,2,Explosive Legs
+6,Warmup,World's greatest stretch,,30,2,Explosive Legs
+6,Warmup,Frogger stretch,,30,2,Explosive Legs
+6,Activation,Squats,,30,2,Explosive Legs
+6,Activation,Glute bridges,,30,2,Explosive Legs
+6,Main Workout,Lunges,,40,4,Explosive Legs
+6,Main Workout,Beast Hold,,40,4,Explosive Legs
+6,Main Workout,Sumo Squats,,40,4,Explosive Legs
+6,Main Workout,High plank jacks,,40,4,Explosive Legs
+6,Finisher,Squat Jumps,,20,4,Explosive Legs
+6,Finisher,Squat Hold,,20,4,Explosive Legs
+7,Warmup,Cat and camel,,30,2,Core
+7,Warmup,Open book,,30,2,Core
+7,Warmup,Prone angels,,30,2,Core
+7,Warmup,Side lying arm rotation,,30,2,Core
+7,Activation,Inchworms,,30,2,Core
+7,Activation,YTW,,30,2,Core
+7,Activation,High plank hold,,30,2,Core
+7,Main Workout,Low plank to high plank,,40,5,Core
+7,Main Workout,Superman Up and Down,,40,5,Core
+7,Main Workout,Shoulder press,,40,5,Core
+7,Main Workout,Sit ups with punches,,40,5,Core
+7,Finisher,Side Plank hold,,30,2,Core
+7,Finisher,High knees,,30,2,Core
+8,Warmup,Cat and Camel,,40,1,Chest
+8,Warmup,Thread to needle,,40,1,Chest
+8,Warmup,Scapula Pushup,,40,1,Chest
+8,Warmup,Chest opener to overhead stretch,,40,1,Chest
+8,Warmup,Downward Dog to pushup,,40,1,Chest
+8,Warmup,Chest Press,,40,1,Chest
+8,Main Workout,Chest Press,,40,3,Chest
+8,Main Workout,Dumbbell Squeeze,,40,3,Chest
+8,Main Workout,Skull Crusher,,40,3,Chest
+8,Main Workout,Overhead Extension,,40,3,Chest
+8,Main Workout,Pushups,,40,3,Chest
+8,Finisher,Leg raise hold to crunches,,30,2,Chest
+8,Finisher,Plank,,30,2,Chest
+9,Warmup,"Mountain, Beast hold, Shoulder Tap",,40,2,Clean and Curls
+9,Warmup,World's greatest stretch,,40,2,Clean and Curls
+9,Warmup,Reverse Lunge with Knee drive,,40,2,Clean and Curls
+9,Main Workout 1,Clean,,30,3,Clean and Curls
+9,Main Workout 1,Jump Squats,,30,3,Clean and Curls
+9,Main Workout 1,Leg raises,,30,3,Clean and Curls
+9,Main Workout 2,Renegade Rows,,30,3,Clean and Curls
+9,Main Workout 2,Biceps curl,,30,3,Clean and Curls
+9,Main Workout 2,Suitcase Lunges,,30,3,Clean and Curls
+9,Finisher,Burpees,,60,2,Clean and Curls
+9,Finisher,Plank,,60,3,Clean and Curls
+10,Warmup,YTW,,30,2,Arms like Hell
+10,Warmup,High plank to beast,,30,2,Arms like Hell
+10,Warmup,Renegade Rows to Toe touch,,30,2,Arms like Hell
+10,Warmup,cobra to Mountain,,30,2,Arms like Hell
+10,Main Workout,Rows,,30,4,Arms like Hell
+10,Main Workout,Superman up and down,,30,4,Arms like Hell
+10,Main Workout,Zercher's curls,,30,4,Arms like Hell
+10,Main Workout 2,Rows,,30,4,Arms like Hell
+10,Main Workout 2,Hammer curls,,30,4,Arms like Hell
+10,Main Workout 2,Double mountain climbers,,30,4,Arms like Hell
+10,Finisher,Power Jacks,,30,2,Arms like Hell
+10,Finisher,Front steps,,30,2,Arms like Hell
+11,Warmup,Knee to chest ,,30,2,Get Fast
+11,Warmup,Supine Twist,,30,2,Get Fast
+11,Warmup,Hip bridge,,30,2,Get Fast
+11,Warmup,Deadbugs,,30,2,Get Fast
+11,Warmup,Bird dog,,30,2,Get Fast
+11,Warmup,Side Planks,,30,2,Get Fast
+11,Warmup,Plank,,30,2,Get Fast
+11,Activation,Burpee to High knees,,60,1,Get Fast
+11,Main Workout 1,High knees,,30,2,Get Fast
+11,Main Workout 1,Crab toe touch,,30,2,Get Fast
+11,Main Workout 1,2-Plank Jack to 4-Mountain Climbers,,30,2,Get Fast
+11,Main Workout 2,Burpee Tuck Jump,,30,2,Get Fast
+11,Main Workout 2,Reverse Plank in and out,,30,2,Get Fast
+11,Main Workout 2,Jump Squat,,30,2,Get Fast
+11,Main Workout 3,Plank to pike,,30,2,Get Fast
+11,Main Workout 3,Thrusters,,30,2,Get Fast
+11,Main Workout 3,Lateral Jump Burpee,,30,2,Get Fast
+11,Finisher,The 100,100,,2,Get Fast
+12,Warmup,Spot Jog,,30,1,Upper Body
+12,Warmup,Butt Kicks,,30,1,Upper Body
+12,Warmup,Arm stretch,,30,1,Upper Body
+12,Activation,Deltoid Circles,,40,1,Upper Body
+12,Activation,Cat and camel,,40,1,Upper Body
+12,Activation,Thread to needle,,40,1,Upper Body
+12,Activation,Scapula Pushups,,40,1,Upper Body
+12,Activation,World's greatest Stretch,,40,1,Upper Body
+12,Activation,Hip openers,,40,1,Upper Body
+12,Activation,Squat Hold with T-spine rotation,,40,1,Upper Body
+12,Main Workout 1,Chest Press,,60,2,Upper Body
+12,Main Workout 1,Rows,,60,2,Upper Body
+12,Main Workout 1,Pushups,,60,2,Upper Body
+12,Main Workout 2,Biceps Curls,,60,2,Upper Body
+12,Main Workout 2,Lateral Raise,,60,2,Upper Body
+12,Main Workout 2,Shoulder Taps,,60,2,Upper Body
+12,Finisher,Squats,,40,2,Upper Body
+12,Finisher,Quadrockers,,30,2,Upper Body
+12,Finisher,Glute Bridges,,30,2,Upper Body
+13,Warmup,Spot Jog,,30,2,Shoulders
+13,Warmup,Y raises,,30,2,Shoulders
+13,Warmup,Shoulder Rotation,,30,2,Shoulders
+13,Warmup,Beast Hold Shoulder Taps,,30,2,Shoulders
+13,Main Workout,Pike Pushups,,30,4,Shoulders
+13,Main Workout,Shoulder Press,,30,4,Shoulders
+13,Main Workout,Front Raises,,30,4,Shoulders
+13,Main Workout 2,Dumbbell High pull,,30,4,Shoulders
+13,Main Workout 2,Curls,,30,4,Shoulders
+13,Main Workout 2,Halos,,30,4,Shoulders
+13,Finisher,Burpees,,60,3,Shoulders
+14,Warmup,Spot Jog,,30,2,Legs - Core
+14,Warmup,Cat and Camel,,30,2,Legs - Core
+14,Warmup,Supine Twist,,30,2,Legs - Core
+14,Warmup,Deltoid Circles,,30,2,Legs - Core
+14,Main Workout,Squat,12,,5,Legs - Core
+14,Main Workout,Frog Jumps,12,,5,Legs - Core
+14,Main Workout,Pushups,12,,5,Legs - Core
+14,Main Workout,V-hold Toe touches,12,,5,Legs - Core
+14,Finisher,Plank,,40,5,Legs - Core
+14,Finisher,Sprawls with Taps,,20,2,Legs - Core
+14,Finisher,Sprawls with Knee to Elbow,,20,2,Legs - Core
+15,Warmup,Jumping Ts,,30,2,Endurance
+15,Warmup,Child to Cobra,,30,2,Endurance
+15,Warmup,Forearm Stretch,,40,2,Endurance
+15,Warmup,T spine rotation,,40,2,Endurance
+15,Main Workout,Pushup with Rows,12,,6,Endurance
+15,Main Workout,Sprawls,12,,6,Endurance
+15,Main Workout,Superman up & down,12,,6,Endurance
+15,Main Workout,Leg Tuckins and Russian Twist,24,,6,Endurance
+15,Finisher,Star Plank Hold,,20,8,Endurance
+16,Warmup,Around the World,,30,2,Back to back
+16,Warmup,Forearm Stretch,,30,2,Back to back
+16,Warmup,Down dog to cobra,,30,2,Back to back
+16,Main workout,Row,12,,4,Back to back
+16,Main workout,Shrugs,18,,4,Back to back
+16,Main workout,Crush grip row hold,,24,4,Back to back
+16,Finisher,Curls,,20,4,Back to back
+16,Finisher,Skater Jumps,,20,4,Back to back
+16,Finisher,Hammer curls,,20,4,Back to back
+17,Warmup,Spot Jog,,30,1,Legs and Legs
+17,Warmup,Swimmer's stretch,,30,1,Legs and Legs
+17,Warmup,Cobra to child pose,,30,1,Legs and Legs
+17,Warmup,Bridge Reach,,30,1,Legs and Legs
+17,Warmup,Side Bend Lunges,,30,1,Legs and Legs
+17,Warmup,Dynamic Hamstring Stretch,,40,1,Legs and Legs
+17,Warmup,Bear Crawls,,30,1,Legs and Legs
+17,Warmup,Spider Lunges,,30,1,Legs and Legs
+17,Main Workout,Squat,,40,3,Legs and Legs
+17,Main Workout,RDL,,40,3,Legs and Legs
+17,Main Workout,Split Squats,,60,3,Legs and Legs
+17,Main Workout,Glute Bridge hold,,40,3,Legs and Legs
+17,Finisher,V-sit toe touches,,40,3,Legs and Legs
+17,Finisher,Side Bridge Leg Raises,,40,3,Legs and Legs
+18,Warmup,Walkout With Arms,,30,2,Clean and Lunges
+18,Warmup,Child pose to Pushups,,30,2,Clean and Lunges
+18,Warmup,Hip openers,,30,2,Clean and Lunges
+18,Warmup,Lateral Lunge with Arm Reach,,30,2,Clean and Lunges
+18,Main Workout,Dumbbell Forward Reverse Lunge R,,30,5,Clean and Lunges
+18,Main Workout,Dumbbell Forward Reverse Lunge L,,30,5,Clean and Lunges
+18,Main Workout,Floor Press,,30,5,Clean and Lunges
+18,Main Workout,Mountain Climbers,,30,5,Clean and Lunges
+18,Main Workout,Hang power Cleans,,30,5,Clean and Lunges
+18,Main Workout,Jump Squats,,30,5,Clean and Lunges
+19,Warmup,Inchwork,,30,2,Shoulders off
+19,Warmup,YTW,,30,2,Shoulders off
+19,Workout 1,Beast hold shoulder taps,,30,3,Shoulders off
+19,Workout 1,Cuban press,,30,3,Shoulders off
+19,Workout 2,Filly Press,,60,4,Shoulders off
+19,Workout 2,Clean,,30,4,Shoulders off
+19,Workout 3,Front Raises,,30,3,Shoulders off
+19,Workout 3,Lateral Raises,,60,3,Shoulders off
+19,Workout 4,Jump Squats,,20,4,Shoulders off
+19,Workout 4,High Plank Jacks,,20,4,Shoulders off
+19,Finisher,Jumping Jacks,,20,4,Shoulders off
+19,Finisher,Burpees,,20,4,Shoulders off
 """
 
 # --------------------------
@@ -893,7 +1109,42 @@ class WorkoutRunner(threading.Thread):
 class IronCoachApp(App):
     def build(self):
         Window.clearcolor = BG
+        try:
+            return self._build_app()
+        except Exception as e:
+            import traceback
+            err = traceback.format_exc()
+            print(f"[FATAL] {err}")
+            # Show error on screen instead of crashing
+            root = BoxLayout(orientation="vertical", padding=dp(20), spacing=dp(10))
+            with root.canvas.before:
+                Color(*BG)
+                Rectangle(pos=root.pos, size=root.size)
+            root.add_widget(Label(
+                text="STARTUP ERROR",
+                color=ACCENT,
+                bold=True,
+                font_size=sp(20),
+                size_hint_y=None,
+                height=dp(40)
+            ))
+            root.add_widget(Label(
+                text=str(e),
+                color=WHITE,
+                font_size=sp(12),
+                text_size=(Window.width - dp(40), None),
+                halign="left"
+            ))
+            root.add_widget(Label(
+                text=err[-800:],
+                color=GREY,
+                font_size=sp(10),
+                text_size=(Window.width - dp(40), None),
+                halign="left"
+            ))
+            return root
 
+    def _build_app(self):
         # Load data
         try:
             self.df = load_workouts()
@@ -934,7 +1185,7 @@ class IronCoachApp(App):
 
     def get_application_name(self):
         return "Iron Coach"
-
-
+    
+    
 if __name__ == "__main__":
     IronCoachApp().run()
