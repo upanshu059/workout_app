@@ -1,7 +1,6 @@
 """
 IRON COACH - Android Workout App
-Dark aggressive gym aesthetic
-Home screen with workout cards, full UX polish
+Design: Neon Green — dark cards, electric green accents, estimated time
 """
 
 import os
@@ -25,7 +24,7 @@ from kivy.core.window import Window
 from kivy.graphics import Color, RoundedRectangle, Rectangle, Line, Ellipse
 from kivy.utils import get_color_from_hex
 from kivy.metrics import dp, sp
-from kivy.animation import Animation
+from kivy.core.text import LabelBase
 
 try:
     from android import mActivity
@@ -34,27 +33,45 @@ except ImportError:
     ANDROID = False
 
 # --------------------------
-# THEME — Dark Aggressive Gym
+# REGISTER EMOJI FONT
 # --------------------------
-BG          = get_color_from_hex("#0A0A0A")
-BG2         = get_color_from_hex("#111111")
-CARD        = get_color_from_hex("#181818")
-CARD2       = get_color_from_hex("#1F1F1F")
-ACCENT      = get_color_from_hex("#FF3D00")   # fierce orange-red
-ACCENT2     = get_color_from_hex("#FF6B35")   # lighter orange
-GREEN       = get_color_from_hex("#00FF88")   # go / active
+FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "NotoEmoji.ttf")
+if os.path.exists(FONT_PATH):
+    try:
+        LabelBase.register(name="NotoEmoji", fn_regular=FONT_PATH)
+        HAS_EMOJI_FONT = True
+    except Exception:
+        HAS_EMOJI_FONT = False
+else:
+    HAS_EMOJI_FONT = False
+
+# --------------------------
+# THEME — Neon Green
+# --------------------------
+BG          = get_color_from_hex("#080808")
+BG2         = get_color_from_hex("#0D0D0D")
+CARD        = get_color_from_hex("#111111")
+CARD2       = get_color_from_hex("#161616")
+CARD3       = get_color_from_hex("#1A1A1A")
+GREEN       = get_color_from_hex("#00FF88")
+GREEN_DIM   = get_color_from_hex("#00CC6A")
+GREEN_BG    = get_color_from_hex("#001A0D")
+GREEN_CARD  = get_color_from_hex("#00120A")
 WHITE       = get_color_from_hex("#FFFFFF")
-GREY        = get_color_from_hex("#888888")
-DARK_GREY   = get_color_from_hex("#333333")
-BLACK_TEXT  = get_color_from_hex("#000000")
+GREY        = get_color_from_hex("#666666")
+GREY2       = get_color_from_hex("#333333")
+GREY3       = get_color_from_hex("#222222")
+RED         = get_color_from_hex("#FF3D3D")
+AMBER       = get_color_from_hex("#FFB800")
+BLACK       = get_color_from_hex("#000000")
 
 # --------------------------
 # CONFIG
 # --------------------------
-START_DELAY    = 10
-REST_EXERCISE  = 20
-REST_SET       = 40
-REST_TYPE      = 100
+START_DELAY   = 10
+REST_EXERCISE = 20
+REST_SET      = 40
+REST_TYPE     = 100
 
 # --------------------------
 # SAMPLE CSV
@@ -320,7 +337,7 @@ def get_workout_ids(rows):
         wid = int(r["workout_id"])
         if wid not in seen:
             seen.append(wid)
-    return seen
+    return sorted(seen)   # sorted by ID
 
 def get_workout_name(rows, wid):
     for r in rows:
@@ -362,10 +379,21 @@ def get_duration(row):
     if r: return int(float(r)) * 3
     return 30
 
-def get_next_exercise(rows, current_idx):
-    if current_idx + 1 < len(rows):
-        return rows[current_idx + 1]["exercise"]
-    return ""
+def estimate_workout_minutes(rows):
+    total = START_DELAY
+    types = get_types(rows)
+    for t in types:
+        td = filter_type(rows, t)
+        sets_total = get_sets(td)
+        exercises = get_exercises(td)
+        for ex in exercises:
+            ex_row = next(r for r in td if r["exercise"] == ex)
+            dur = get_duration(ex_row)
+            total += sets_total * (dur + REST_EXERCISE)
+        if sets_total > 1:
+            total += (sets_total - 1) * REST_SET
+    total += (len(types) - 1) * REST_TYPE
+    return max(1, total // 60)
 
 def count_exercises(rows):
     return len(get_exercises(rows))
@@ -375,9 +403,13 @@ def count_total_sets(rows):
     total = 0
     for t in types:
         td = filter_type(rows, t)
-        sets = get_sets(td)
-        total += sets * len(get_exercises(td))
+        total += get_sets(td) * len(get_exercises(td))
     return total
+
+def get_next_exercise(rows, current_idx):
+    if current_idx + 1 < len(rows):
+        return rows[current_idx + 1]["exercise"]
+    return ""
 
 # --------------------------
 # TTS ENGINE
@@ -437,18 +469,66 @@ class TTSEngine:
 # --------------------------
 # CUSTOM WIDGETS
 # --------------------------
-class IronButton(Button):
-    """Primary action button — bold red/accent."""
-    def __init__(self, bg=None, fg=None, radius=12, **kwargs):
+def make_bg(widget, color):
+    with widget.canvas.before:
+        c = Color(*color)
+        r = Rectangle(pos=widget.pos, size=widget.size)
+    widget.bind(
+        pos=lambda *a: setattr(r, 'pos', widget.pos),
+        size=lambda *a: setattr(r, 'size', widget.size)
+    )
+
+def make_rounded_bg(widget, color, radius=12):
+    with widget.canvas.before:
+        c = Color(*color)
+        r = RoundedRectangle(pos=widget.pos, size=widget.size, radius=[dp(radius)])
+    widget.bind(
+        pos=lambda *a: setattr(r, 'pos', widget.pos),
+        size=lambda *a: setattr(r, 'size', widget.size)
+    )
+
+class NeonButton(Button):
+    def __init__(self, filled=True, **kwargs):
         super().__init__(**kwargs)
-        self._bg = bg or ACCENT
+        self.filled = filled
+        self.background_normal = ""
+        self.background_color = [0, 0, 0, 0]
+        self.color = BLACK if filled else GREEN
+        self.bold = True
+        self.font_size = sp(13)
+        self.size_hint_y = None
+        self.height = dp(48)
+        self._rect = None
+        self._line = None
+        self.bind(pos=self._draw, size=self._draw)
+
+    def _draw(self, *a):
+        self.canvas.before.clear()
+        with self.canvas.before:
+            if self.filled:
+                Color(*GREEN)
+                RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(8)])
+            else:
+                Color(*GREEN)
+                Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(8)), width=1.2)
+
+    def on_press(self):
+        from kivy.animation import Animation
+        anim = Animation(opacity=0.6, duration=0.04) + Animation(opacity=1.0, duration=0.04)
+        anim.start(self)
+
+
+class SmallButton(Button):
+    def __init__(self, bg=None, fg=None, radius=8, **kwargs):
+        super().__init__(**kwargs)
+        self._bg = bg or CARD2
         self._fg = fg or WHITE
         self._radius = radius
         self.background_normal = ""
         self.background_color = [0, 0, 0, 0]
         self.color = self._fg
         self.bold = True
-        self.font_size = sp(14)
+        self.font_size = sp(16)
         self.size_hint_y = None
         self.height = dp(52)
         self.bind(pos=self._draw, size=self._draw)
@@ -460,169 +540,213 @@ class IronButton(Button):
             RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(self._radius)])
 
     def on_press(self):
-        anim = Animation(opacity=0.7, duration=0.05) + Animation(opacity=1.0, duration=0.05)
+        from kivy.animation import Animation
+        anim = Animation(opacity=0.6, duration=0.04) + Animation(opacity=1.0, duration=0.04)
         anim.start(self)
 
 
-class GhostButton(Button):
-    """Secondary outline button."""
-    def __init__(self, color=None, **kwargs):
+class TagLabel(BoxLayout):
+    def __init__(self, text, **kwargs):
         super().__init__(**kwargs)
-        self._color = color or GREY
-        self.background_normal = ""
-        self.background_color = [0, 0, 0, 0]
-        self.color = self._color
-        self.bold = True
-        self.font_size = sp(13)
+        self.size_hint_x = None
+        self.width = max(dp(60), dp(len(text) * 7 + 16))
         self.size_hint_y = None
-        self.height = dp(48)
-        self.bind(pos=self._draw, size=self._draw)
+        self.height = dp(22)
+        make_rounded_bg(self, GREEN_BG, radius=4)
+        lbl = Label(
+            text=text,
+            color=GREEN,
+            bold=True,
+            font_size=sp(10),
+            halign="center",
+            valign="middle"
+        )
+        lbl.bind(size=lbl.setter('text_size'))
+        self.add_widget(lbl)
 
-    def _draw(self, *a):
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(*self._color)
-            Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(10)), width=1.2)
 
-    def on_press(self):
-        anim = Animation(opacity=0.6, duration=0.05) + Animation(opacity=1.0, duration=0.05)
-        anim.start(self)
+class StatBlock(BoxLayout):
+    def __init__(self, value, label, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = "vertical"
+        self.spacing = dp(2)
+        val_lbl = Label(
+            text=str(value),
+            color=GREEN,
+            bold=True,
+            font_size=sp(20),
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(28)
+        )
+        val_lbl.bind(size=val_lbl.setter('text_size'))
+        lbl = Label(
+            text=label.upper(),
+            color=GREY,
+            font_size=sp(9),
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=dp(16)
+        )
+        lbl.bind(size=lbl.setter('text_size'))
+        self.add_widget(val_lbl)
+        self.add_widget(lbl)
 
 
 class WorkoutCard(BoxLayout):
-    """Home screen workout card."""
-    def __init__(self, name, exercise_count, set_count, types, on_tap, **kwargs):
+    def __init__(self, wid, name, ex_count, set_count, est_min, types, on_tap, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "vertical"
         self.size_hint_y = None
-        self.height = dp(160)
-        self.padding = [dp(20), dp(16)]
-        self.spacing = dp(8)
+        self.height = dp(170)
+        self.padding = [dp(16), dp(14), dp(16), dp(14)]
+        self.spacing = dp(10)
 
         with self.canvas.before:
             Color(*CARD)
-            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(16)])
-            Color(*ACCENT)
-            self.accent_bar = RoundedRectangle(
-                pos=(self.x, self.y + self.height - dp(4)),
-                size=(self.width * 0.4, dp(4)),
-                radius=[dp(2)]
+            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(14)])
+            Color(*GREEN)
+            self.border_rect = Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(14)),
+                width=0.8
             )
         self.bind(pos=self._draw, size=self._draw)
 
-        # Name
+        # Top row: name + workout number badge
+        top_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(32))
         name_lbl = Label(
             text=name.upper(),
             color=WHITE,
             bold=True,
-            font_size=sp(20),
+            font_size=sp(16),
             halign="left",
             valign="middle",
-            size_hint_y=None,
-            height=dp(32)
+            size_hint_x=1
         )
         name_lbl.bind(size=name_lbl.setter('text_size'))
 
-        # Stats row
-        stats_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(24), spacing=dp(16))
-        for icon, val in [("💪", f"{exercise_count} exercises"), ("🔁", f"{set_count} sets")]:
-            stat = Label(
-                text=f"{icon}  {val}",
-                color=GREY,
-                font_size=sp(12),
-                halign="left",
-                valign="middle",
-                size_hint_x=None,
-                width=dp(110)
-            )
-            stat.bind(size=stat.setter('text_size'))
-            stats_row.add_widget(stat)
-        stats_row.add_widget(Widget())
+        badge = BoxLayout(size_hint_x=None, width=dp(28), size_hint_y=None, height=dp(28))
+        make_rounded_bg(badge, GREEN_BG, radius=6)
+        badge_lbl = Label(
+            text=str(wid),
+            color=GREEN,
+            bold=True,
+            font_size=sp(12),
+            halign="center",
+            valign="middle"
+        )
+        badge_lbl.bind(size=badge_lbl.setter('text_size'))
+        badge.add_widget(badge_lbl)
 
-        # Type tags
-        tags_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(28), spacing=dp(6))
-        for t in types[:3]:
-            tag = Label(
-                text=t,
-                color=ACCENT2,
-                font_size=sp(11),
-                bold=True,
-                size_hint_x=None,
-                width=dp(80),
-                halign="left",
-                valign="middle"
-            )
-            tag.bind(size=tag.setter('text_size'))
-            tags_row.add_widget(tag)
+        top_row.add_widget(name_lbl)
+        top_row.add_widget(badge)
+
+        # Stats row
+        stats_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(46), spacing=dp(8))
+        stats_row.add_widget(StatBlock(ex_count, "exercises"))
+        # Divider
+        div = Widget(size_hint_x=None, width=dp(1))
+        with div.canvas:
+            Color(*GREY2)
+            Rectangle(pos=div.pos, size=div.size)
+        div.bind(pos=lambda *a: None, size=lambda *a: None)
+        stats_row.add_widget(div)
+        stats_row.add_widget(StatBlock(set_count, "sets"))
+        div2 = Widget(size_hint_x=None, width=dp(1))
+        with div2.canvas:
+            Color(*GREY2)
+            Rectangle(pos=div2.pos, size=div2.size)
+        div2.bind(pos=lambda *a: None, size=lambda *a: None)
+        stats_row.add_widget(div2)
+        stats_row.add_widget(StatBlock(f"{est_min}m", "est. time"))
+
+        # Tags row
+        tags_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(22), spacing=dp(6))
+        for t in types[:4]:
+            tags_row.add_widget(TagLabel(text=t))
         tags_row.add_widget(Widget())
 
         # Start button
-        btn = IronButton(text="START WORKOUT  →", bg=ACCENT, fg=WHITE, radius=10, height=dp(42))
-        btn.font_size = sp(13)
+        btn = NeonButton(filled=True, text="START  -->")
+        btn.height = dp(40)
         btn.bind(on_press=lambda x: on_tap())
 
-        self.add_widget(name_lbl)
+        self.add_widget(top_row)
         self.add_widget(stats_row)
         self.add_widget(tags_row)
         self.add_widget(btn)
 
     def _draw(self, *a):
-        self.rect.pos = self.pos
-        self.rect.size = self.size
-        self.accent_bar.pos = (self.x, self.y + self.height - dp(4))
-        self.accent_bar.size = (self.width * 0.4, dp(4))
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+        self.border_rect.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(14))
 
 
 class SetDot(Widget):
-    """A small circle dot indicating a set — filled if done."""
-    def __init__(self, done=False, **kwargs):
+    def __init__(self, done=False, active=False, **kwargs):
         super().__init__(**kwargs)
         self.size_hint = (None, None)
-        self.size = (dp(10), dp(10))
+        self.size = (dp(8), dp(8))
         self.done = done
+        self.active = active
         self.bind(pos=self._draw, size=self._draw)
 
     def _draw(self, *a):
         self.canvas.clear()
         with self.canvas:
             if self.done:
-                Color(*ACCENT)
+                Color(*GREEN)
+                Ellipse(pos=self.pos, size=self.size)
+            elif self.active:
+                Color(*GREEN_DIM)
+                Ellipse(pos=self.pos, size=self.size)
             else:
-                Color(*DARK_GREY)
-            Ellipse(pos=self.pos, size=self.size)
+                Color(*GREY2)
+                Ellipse(pos=self.pos, size=self.size)
 
 
 class ExerciseRow(BoxLayout):
-    """One exercise row in the active workout timeline."""
-    def __init__(self, exercise, sets_total, set_done, active=False, **kwargs):
+    def __init__(self, exercise, sets_total, sets_done, active=False, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "horizontal"
         self.size_hint_y = None
-        self.height = dp(54)
-        self.padding = [dp(14), dp(8)]
-        self.spacing = dp(10)
+        self.height = dp(48)
+        self.padding = [dp(12), dp(6), dp(12), dp(6)]
+        self.spacing = dp(8)
 
         bg = CARD2 if active else CARD
-        border_color = ACCENT if active else CARD
-
         with self.canvas.before:
             Color(*bg)
-            self.rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(12)])
-            Color(*border_color)
-            self.border = Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(12)), width=1.5)
+            self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(10)])
+            if active:
+                Color(*GREEN)
+                self.border = Line(
+                    rounded_rectangle=(self.x, self.y, self.width, self.height, dp(10)),
+                    width=1.0
+                )
+            else:
+                self.border = None
         self.bind(pos=self._draw, size=self._draw)
 
-        # Active indicator
-        if active:
-            indicator = Label(text="▶", color=ACCENT, font_size=sp(12), size_hint_x=None, width=dp(16))
-            self.add_widget(indicator)
+        # Active marker
+        marker = Widget(size_hint_x=None, width=dp(3))
+        with marker.canvas:
+            Color(*(GREEN if active else GREY2))
+            RoundedRectangle(pos=marker.pos, size=marker.size, radius=[dp(2)])
+        marker.bind(
+            pos=lambda *a: None,
+            size=lambda *a: None
+        )
+        self.add_widget(marker)
 
-        # Exercise name
+        # Name
         name_lbl = Label(
             text=exercise,
             color=WHITE if active else GREY,
             bold=active,
-            font_size=sp(14) if active else sp(13),
+            font_size=sp(13),
             halign="left",
             valign="middle",
             size_hint_x=1
@@ -631,29 +755,50 @@ class ExerciseRow(BoxLayout):
         self.add_widget(name_lbl)
 
         # Set dots
-        dots_row = BoxLayout(orientation="horizontal", spacing=dp(4), size_hint_x=None, width=dp(sets_total * 14))
+        dots = BoxLayout(
+            orientation="horizontal",
+            spacing=dp(4),
+            size_hint_x=None,
+            width=dp(sets_total * 12),
+            padding=[0, dp(4)]
+        )
         for i in range(sets_total):
-            dots_row.add_widget(SetDot(done=(i < set_done)))
-        self.add_widget(dots_row)
+            done = i < sets_done
+            act = (i == sets_done and active)
+            dots.add_widget(SetDot(done=done, active=act))
+        self.add_widget(dots)
 
     def _draw(self, *a):
-        self.rect.pos = self.pos
-        self.rect.size = self.size
-        self.border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(12))
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+        if self.border:
+            self.border.rounded_rectangle = (self.x, self.y, self.width, self.height, dp(10))
 
 
-class SectionLabel(Label):
+class SectionHeader(BoxLayout):
     def __init__(self, text, **kwargs):
         super().__init__(**kwargs)
-        self.text = text.upper()
-        self.color = ACCENT
-        self.bold = True
-        self.font_size = sp(11)
         self.size_hint_y = None
-        self.height = dp(30)
-        self.halign = "left"
-        self.valign = "bottom"
-        self.bind(size=self.setter('text_size'))
+        self.height = dp(28)
+        self.padding = [dp(4), 0]
+
+        dot = Widget(size_hint_x=None, width=dp(6), size_hint_y=None, height=dp(6))
+        with dot.canvas:
+            Color(*GREEN)
+            Ellipse(pos=dot.pos, size=dot.size)
+        dot.bind(pos=lambda *a: None, size=lambda *a: None)
+
+        lbl = Label(
+            text=text.upper(),
+            color=GREEN,
+            bold=True,
+            font_size=sp(10),
+            halign="left",
+            valign="middle"
+        )
+        lbl.bind(size=lbl.setter('text_size'))
+        self.add_widget(dot)
+        self.add_widget(lbl)
 
 
 # --------------------------
@@ -667,59 +812,74 @@ class HomeScreen(Screen):
 
     def _build(self):
         root = BoxLayout(orientation="vertical")
-
-        with root.canvas.before:
-            Color(*BG)
-            self._bg = Rectangle(pos=root.pos, size=root.size)
-        root.bind(pos=lambda *a: setattr(self._bg, 'pos', root.pos),
-                  size=lambda *a: setattr(self._bg, 'size', root.size))
+        make_bg(root, BG)
 
         # Header
-        header = BoxLayout(orientation="vertical", size_hint_y=None, height=dp(100),
-                           padding=[dp(20), dp(24), dp(20), dp(8)])
+        header = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=dp(90),
+            padding=[dp(20), dp(28), dp(20), dp(8)]
+        )
+        make_bg(header, BG)
+
+        title_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(36))
         title = Label(
-            text="IRON COACH",
+            text="Iron Coach",
             color=WHITE,
             bold=True,
-            font_size=sp(30),
+            font_size=sp(26),
             halign="left",
-            valign="middle",
-            size_hint_y=None,
-            height=dp(44)
+            valign="middle"
         )
         title.bind(size=title.setter('text_size'))
 
-        subtitle = Label(
-            text="SELECT YOUR WORKOUT",
-            color=ACCENT,
+        # Neon dot accent
+        dot_box = BoxLayout(size_hint_x=None, width=dp(10), padding=[0, dp(12)])
+        dot = Widget(size_hint_y=None, height=dp(10))
+        with dot.canvas:
+            Color(*GREEN)
+            Ellipse(pos=dot.pos, size=(dp(8), dp(8)))
+        dot.bind(pos=lambda *a: None, size=lambda *a: None)
+        dot_box.add_widget(dot)
+
+        title_row.add_widget(title)
+        title_row.add_widget(dot_box)
+
+        sub = Label(
+            text="SELECT WORKOUT",
+            color=GREEN,
             bold=True,
-            font_size=sp(11),
+            font_size=sp(10),
             halign="left",
             valign="middle",
             size_hint_y=None,
-            height=dp(20)
+            height=dp(18)
         )
-        subtitle.bind(size=subtitle.setter('text_size'))
+        sub.bind(size=sub.setter('text_size'))
 
-        header.add_widget(title)
-        header.add_widget(subtitle)
+        header.add_widget(title_row)
+        header.add_widget(sub)
         root.add_widget(header)
 
-        # Divider
-        divider = Widget(size_hint_y=None, height=dp(1))
-        with divider.canvas:
-            Color(*ACCENT)
-            Rectangle(pos=divider.pos, size=divider.size)
-        divider.bind(pos=lambda *a: None, size=lambda *a: None)
-        root.add_widget(divider)
+        # Green divider line
+        line = Widget(size_hint_y=None, height=dp(1))
+        with line.canvas:
+            Color(*GREEN)
+            Rectangle(pos=line.pos, size=line.size)
+        line.bind(
+            pos=lambda *a: None,
+            size=lambda *a: None
+        )
+        root.add_widget(line)
 
-        # Scroll cards
+        # Scroll
         scroll = ScrollView(size_hint_y=1)
         self.cards_layout = BoxLayout(
             orientation="vertical",
             size_hint_y=None,
             spacing=dp(12),
-            padding=[dp(16), dp(16)]
+            padding=[dp(14), dp(14)]
         )
         self.cards_layout.bind(minimum_height=self.cards_layout.setter("height"))
         scroll.add_widget(self.cards_layout)
@@ -734,17 +894,20 @@ class HomeScreen(Screen):
         for wid in self.app_ref.workout_ids:
             wd = filter_workout(df, wid)
             name = get_workout_name(df, wid)
-            ex_count = len(get_exercises(wd))
+            ex_count = count_exercises(wd)
             set_count = count_total_sets(wd)
+            est_min = estimate_workout_minutes(wd)
             types = get_types(wd)
             card = WorkoutCard(
+                wid=wid,
                 name=name,
-                exercise_count=ex_count,
+                ex_count=ex_count,
                 set_count=set_count,
+                est_min=est_min,
                 types=types,
                 on_tap=lambda w=wid: self.app_ref.start_workout(w),
                 size_hint_y=None,
-                height=dp(160)
+                height=dp(170)
             )
             self.cards_layout.add_widget(card)
 
@@ -757,91 +920,104 @@ class WorkoutScreen(Screen):
         super().__init__(**kwargs)
         self.app_ref = app_ref
         self.thread = None
-        self._current_exercise = ""
-        self._current_set = 0
-        self._total_sets = 0
-        self._set_done = {}   # exercise -> sets done
+        self._workout_df = []
+        self._set_done = {}
         self._build()
 
     def _build(self):
         root = BoxLayout(orientation="vertical")
-        with root.canvas.before:
-            Color(*BG)
-            self._bg = Rectangle(pos=root.pos, size=root.size)
-        root.bind(pos=lambda *a: setattr(self._bg, 'pos', root.pos),
-                  size=lambda *a: setattr(self._bg, 'size', root.size))
+        make_bg(root, BG)
 
         # Top bar
-        topbar = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(60),
-                           padding=[dp(16), dp(10)])
-        self.back_btn = IronButton(
-            text="← BACK", bg=CARD, fg=GREY, radius=8,
-            size_hint_x=None, width=dp(90), height=dp(40)
+        topbar = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(56),
+            padding=[dp(14), dp(10), dp(14), dp(4)],
+            spacing=dp(10)
         )
-        self.back_btn.font_size = sp(12)
-        self.back_btn.bind(on_press=self._go_home)
+        make_bg(topbar, BG)
+
+        back_btn = SmallButton(
+            text="<",
+            bg=CARD,
+            fg=GREEN,
+            radius=8,
+            size_hint_x=None,
+            width=dp(44),
+            height=dp(44),
+            font_size=sp(18)
+        )
+        back_btn.bind(on_press=self._go_home)
 
         self.workout_title = Label(
             text="WORKOUT",
             color=WHITE,
             bold=True,
-            font_size=sp(16),
+            font_size=sp(15),
             halign="center",
             valign="middle"
         )
         self.workout_title.bind(size=self.workout_title.setter('text_size'))
 
-        topbar.add_widget(self.back_btn)
+        topbar.add_widget(back_btn)
         topbar.add_widget(self.workout_title)
-        topbar.add_widget(Widget(size_hint_x=None, width=dp(90)))
+        topbar.add_widget(Widget(size_hint_x=None, width=dp(44)))
         root.add_widget(topbar)
 
-        # Phase label
+        # Timer block
+        timer_block = BoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=dp(140),
+            padding=[dp(14), dp(4), dp(14), dp(4)]
+        )
+        make_rounded_bg(timer_block, CARD, radius=14)
+
         self.phase_label = Label(
             text="GET READY",
-            color=ACCENT,
+            color=GREEN,
             bold=True,
-            font_size=sp(13),
-            size_hint_y=None,
-            height=dp(28),
+            font_size=sp(11),
             halign="center",
-            valign="middle"
+            valign="middle",
+            size_hint_y=None,
+            height=dp(22)
         )
         self.phase_label.bind(size=self.phase_label.setter('text_size'))
-        root.add_widget(self.phase_label)
 
-        # Big timer
         self.timer_label = Label(
             text="--",
             color=WHITE,
             bold=True,
-            font_size=sp(80),
-            size_hint_y=None,
-            height=dp(110),
+            font_size=sp(72),
             halign="center",
-            valign="middle"
+            valign="middle",
+            size_hint_y=None,
+            height=dp(90)
         )
         self.timer_label.bind(size=self.timer_label.setter('text_size'))
-        root.add_widget(self.timer_label)
 
-        # Set counter + upcoming
-        info_row = BoxLayout(orientation="horizontal", size_hint_y=None, height=dp(36),
-                             padding=[dp(16), 0])
+        info_row = BoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(22),
+            padding=[dp(4), 0]
+        )
         self.set_counter = Label(
             text="",
-            color=ACCENT2,
+            color=GREEN,
             bold=True,
-            font_size=sp(14),
+            font_size=sp(12),
             halign="left",
             valign="middle",
             size_hint_x=0.5
         )
         self.set_counter.bind(size=self.set_counter.setter('text_size'))
-
         self.upcoming_label = Label(
             text="",
             color=GREY,
-            font_size=sp(12),
+            font_size=sp(11),
             halign="right",
             valign="middle",
             size_hint_x=0.5
@@ -849,51 +1025,82 @@ class WorkoutScreen(Screen):
         self.upcoming_label.bind(size=self.upcoming_label.setter('text_size'))
         info_row.add_widget(self.set_counter)
         info_row.add_widget(self.upcoming_label)
-        root.add_widget(info_row)
+
+        timer_block.add_widget(self.phase_label)
+        timer_block.add_widget(self.timer_label)
+        timer_block.add_widget(info_row)
+
+        timer_wrapper = BoxLayout(
+            size_hint_y=None, height=dp(148),
+            padding=[dp(14), dp(4)]
+        )
+        timer_wrapper.add_widget(timer_block)
+        root.add_widget(timer_wrapper)
 
         # Progress bar
-        pb_box = BoxLayout(size_hint_y=None, height=dp(6), padding=[dp(16), 0])
+        pb_wrapper = BoxLayout(
+            size_hint_y=None, height=dp(10),
+            padding=[dp(14), 0]
+        )
         self.progress = ProgressBar(max=100, value=0)
-        pb_box.add_widget(self.progress)
-        root.add_widget(pb_box)
+        pb_wrapper.add_widget(self.progress)
+        root.add_widget(pb_wrapper)
 
         # Timeline
         scroll = ScrollView(size_hint_y=1, do_scroll_x=False)
         self.timeline = BoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            spacing=dp(6),
+            spacing=dp(5),
             padding=[dp(12), dp(8)]
         )
         self.timeline.bind(minimum_height=self.timeline.setter("height"))
         scroll.add_widget(self.timeline)
         root.add_widget(scroll)
 
-        # Control buttons
-        ctrl = GridLayout(cols=4, size_hint_y=None, height=dp(64),
-                          spacing=dp(6), padding=[dp(12), dp(8)])
+        # Control buttons — 4 in a row
+        ctrl_wrapper = BoxLayout(
+            size_hint_y=None, height=dp(72),
+            padding=[dp(12), dp(8)],
+            spacing=dp(8)
+        )
+        make_bg(ctrl_wrapper, BG)
 
-        self.pause_btn = IronButton(text="⏸", bg=CARD2, fg=WHITE, radius=10, height=dp(50))
-        self.pause_btn.font_size = sp(20)
+        self.pause_btn = SmallButton(text="||", bg=CARD2, fg=WHITE, radius=10)
         self.pause_btn.bind(on_press=self._pause)
 
-        self.resume_btn = IronButton(text="▶", bg=GREEN, fg=BLACK_TEXT, radius=10, height=dp(50))
-        self.resume_btn.font_size = sp(20)
+        self.resume_btn = SmallButton(text=">", bg=GREEN_BG, fg=GREEN, radius=10)
         self.resume_btn.bind(on_press=self._resume)
 
-        self.skip_btn = IronButton(text="⏭", bg=CARD2, fg=ACCENT2, radius=10, height=dp(50))
-        self.skip_btn.font_size = sp(20)
+        self.skip_btn = SmallButton(text=">|", bg=CARD2, fg=GREEN, radius=10)
         self.skip_btn.bind(on_press=self._skip)
 
-        self.stop_btn = IronButton(text="⏹", bg=ACCENT, fg=WHITE, radius=10, height=dp(50))
-        self.stop_btn.font_size = sp(20)
+        self.stop_btn = SmallButton(text="[]", bg=CARD2, fg=RED, radius=10)
         self.stop_btn.bind(on_press=self._stop)
 
-        ctrl.add_widget(self.pause_btn)
-        ctrl.add_widget(self.resume_btn)
-        ctrl.add_widget(self.skip_btn)
-        ctrl.add_widget(self.stop_btn)
-        root.add_widget(ctrl)
+        ctrl_wrapper.add_widget(self.pause_btn)
+        ctrl_wrapper.add_widget(self.resume_btn)
+        ctrl_wrapper.add_widget(self.skip_btn)
+        ctrl_wrapper.add_widget(self.stop_btn)
+        root.add_widget(ctrl_wrapper)
+
+        # Button labels
+        label_row = BoxLayout(
+            size_hint_y=None, height=dp(16),
+            padding=[dp(12), 0],
+            spacing=dp(8)
+        )
+        for txt in ["PAUSE", "RESUME", "SKIP", "STOP"]:
+            lbl = Label(
+                text=txt,
+                color=GREY,
+                font_size=sp(9),
+                halign="center",
+                valign="middle"
+            )
+            lbl.bind(size=lbl.setter('text_size'))
+            label_row.add_widget(lbl)
+        root.add_widget(label_row)
 
         self.add_widget(root)
 
@@ -901,10 +1108,17 @@ class WorkoutScreen(Screen):
         self.workout_title.text = workout_name.upper()
         self._workout_df = filter_workout(df, workout_id)
         self._set_done = {}
+        self.phase_label.text = "GET READY"
+        self.timer_label.text = "--"
+        self.timer_label.color = WHITE
+        self.set_counter.text = ""
+        self.upcoming_label.text = ""
+        self.progress.value = 0
         self.render_timeline()
 
         if self.thread and self.thread.is_alive():
             self.thread.running = False
+            self.thread.skip_now()
 
         self.thread = WorkoutRunner(
             rows=self._workout_df,
@@ -920,11 +1134,9 @@ class WorkoutScreen(Screen):
 
     def render_timeline(self, current_ex=None):
         self.timeline.clear_widgets()
-        rows = self._workout_df if hasattr(self, '_workout_df') else []
-        types = get_types(rows)
-        for t in types:
-            self.timeline.add_widget(SectionLabel(text=t))
-            td = filter_type(rows, t)
+        for t in get_types(self._workout_df):
+            self.timeline.add_widget(SectionHeader(text=t))
+            td = filter_type(self._workout_df, t)
             sets_total = get_sets(td)
             for ex in get_exercises(td):
                 done = self._set_done.get(ex, 0)
@@ -933,10 +1145,11 @@ class WorkoutScreen(Screen):
                     ExerciseRow(ex, sets_total, done, active=active)
                 )
 
-    # ---- Instant controls (no delay) ----
+    # ---- Instant controls ----
     def _pause(self, *a):
         if self.thread:
             self.thread.paused = True
+            self.phase_label.text = "PAUSED"
 
     def _resume(self, *a):
         if self.thread:
@@ -944,7 +1157,7 @@ class WorkoutScreen(Screen):
 
     def _skip(self, *a):
         if self.thread:
-            self.thread.skip_now()   # instant, no lock needed
+            self.thread.skip_now()
 
     def _stop(self, *a):
         if self.thread:
@@ -953,7 +1166,7 @@ class WorkoutScreen(Screen):
             self.thread.skip_now()
         if self.app_ref.tts:
             self.app_ref.tts.stop()
-        Clock.schedule_once(lambda dt: self._go_home(), 0.1)
+        Clock.schedule_once(lambda dt: self._go_home(), 0.15)
 
     def _go_home(self, *a):
         if self.thread:
@@ -968,18 +1181,14 @@ class WorkoutScreen(Screen):
             self.phase_label.text = phase.upper()
             self.upcoming_label.text = f"Next: {upcoming}" if upcoming else ""
             self.timer_label.text = str(sec)
-            # Flash red when <= 3
-            if sec <= 3:
-                self.timer_label.color = ACCENT
-            else:
-                self.timer_label.color = WHITE
+            self.timer_label.color = RED if sec <= 3 else WHITE
             self.progress.value = int((1 - sec / total) * 100)
         Clock.schedule_once(u, 0)
 
-    def _on_highlight(self, exercise, current_set, total_sets):
+    def _on_highlight(self, exercise, cur_set, total_sets):
         def u(dt):
             self.phase_label.text = exercise.upper()
-            self.set_counter.text = f"SET {current_set} / {total_sets}"
+            self.set_counter.text = f"SET {cur_set} / {total_sets}"
             self.render_timeline(exercise)
         Clock.schedule_once(u, 0)
 
@@ -988,10 +1197,11 @@ class WorkoutScreen(Screen):
 
     def _on_finish(self):
         def u(dt):
-            self.phase_label.text = "COMPLETE!"
-            self.timer_label.text = "✓"
+            self.phase_label.text = "COMPLETE"
+            self.timer_label.text = "OK"
             self.timer_label.color = GREEN
-            self.set_counter.text = "WORKOUT DONE 💪"
+            self.set_counter.text = "DONE"
+            self.upcoming_label.text = ""
         Clock.schedule_once(u, 0)
 
     def _on_speak(self, text):
@@ -1000,7 +1210,7 @@ class WorkoutScreen(Screen):
 
 
 # --------------------------
-# WORKOUT RUNNER THREAD
+# WORKOUT RUNNER
 # --------------------------
 class WorkoutRunner(threading.Thread):
     def __init__(self, rows, tts, bell, on_update, on_highlight, on_set_done, on_finish, on_speak):
@@ -1015,14 +1225,12 @@ class WorkoutRunner(threading.Thread):
         self.on_speak = on_speak
         self.running = True
         self.paused = False
-        self._skip = False   # internal flag, set instantly
+        self._skip = False
 
     def skip_now(self):
-        """Called from UI thread — instantly signals skip."""
         self._skip = True
 
     def _wait(self, seconds):
-        """Sleep in small increments, respecting pause/skip/stop."""
         end = time.time() + seconds
         while time.time() < end:
             if not self.running or self._skip:
@@ -1036,13 +1244,12 @@ class WorkoutRunner(threading.Thread):
     def run(self):
         self.say("Get ready to train")
         self.phase("GET READY", START_DELAY)
-
         types = get_types(self.rows)
+
         for t in types:
             if not self.running: return
             td = filter_type(self.rows, t)
             sets_total = get_sets(td)
-            exercises = get_exercises(td)
             self.say(f"Starting {t}")
 
             for s in range(1, sets_total + 1):
@@ -1053,15 +1260,14 @@ class WorkoutRunner(threading.Thread):
                     reps = get_val(ex_row, "reps")
                     t_val = get_val(ex_row, "time")
                     duration = get_duration(ex_row)
-                    reps_str = (f"{int(float(reps))} reps" if reps
-                                else f"{int(float(t_val))} seconds")
-
+                    reps_str = (
+                        f"{int(float(reps))} reps" if reps
+                        else f"{int(float(t_val))} seconds"
+                    )
                     self.say(f"Set {s}. {exercise}. {reps_str}")
                     self.on_highlight(exercise, s, sets_total)
-
                     next_ex = get_next_exercise(td, ex_idx)
-                    self.phase(exercise, duration, next_ex, current_set=s, total_sets=sets_total)
-
+                    self.phase(exercise, duration, next_ex, cur_set=s, total_sets=sets_total)
                     self.on_set_done(exercise)
                     self.say("Rest")
                     self.phase("REST", REST_EXERCISE)
@@ -1081,7 +1287,7 @@ class WorkoutRunner(threading.Thread):
         self.on_speak(text)
         self._wait(max(1.0, len(text) * 0.055))
 
-    def phase(self, label, seconds, upcoming="", current_set=0, total_sets=0):
+    def phase(self, label, seconds, upcoming="", cur_set=0, total_sets=0):
         self._skip = False
         for sec in range(seconds, 0, -1):
             if not self.running or self._skip:
@@ -1093,7 +1299,6 @@ class WorkoutRunner(threading.Thread):
             if sec <= 3:
                 self.on_speak(str(sec))
             time.sleep(1)
-        # Bell
         if self.bell:
             try:
                 Clock.schedule_once(lambda dt: self.bell.play(), 0)
@@ -1113,37 +1318,35 @@ class IronCoachApp(App):
             import traceback
             err = traceback.format_exc()
             print(f"[FATAL] {err}")
-            # Show error on screen instead of crashing
             root = BoxLayout(orientation="vertical", padding=dp(20), spacing=dp(10))
-            with root.canvas.before:
-                Color(*BG)
-                Rectangle(pos=root.pos, size=root.size)
+            make_bg(root, BG)
             root.add_widget(Label(
                 text="STARTUP ERROR",
-                color=ACCENT,
+                color=GREEN,
                 bold=True,
-                font_size=sp(20),
+                font_size=sp(18),
                 size_hint_y=None,
                 height=dp(40)
             ))
             root.add_widget(Label(
                 text=str(e),
                 color=WHITE,
-                font_size=sp(12),
+                font_size=sp(11),
                 text_size=(Window.width - dp(40), None),
-                halign="left"
+                halign="left",
+                size_hint_y=None,
+                height=dp(120)
             ))
             root.add_widget(Label(
-                text=err[-800:],
+                text=err[-600:],
                 color=GREY,
-                font_size=sp(10),
+                font_size=sp(9),
                 text_size=(Window.width - dp(40), None),
                 halign="left"
             ))
             return root
 
     def _build_app(self):
-        # Load data
         try:
             self.df = load_workouts()
             self.workout_ids = get_workout_ids(self.df)
@@ -1152,13 +1355,11 @@ class IronCoachApp(App):
             self.df = list(csv.DictReader(io.StringIO(SAMPLE_CSV)))
             self.workout_ids = get_workout_ids(self.df)
 
-        # TTS
         try:
             self.tts = TTSEngine()
         except Exception:
             self.tts = None
 
-        # Bell
         self.bell = None
         try:
             from kivy.core.audio import SoundLoader
@@ -1167,7 +1368,6 @@ class IronCoachApp(App):
         except Exception:
             pass
 
-        # Screens
         self.sm = ScreenManager(transition=NoTransition())
         self.home_screen = HomeScreen(name="home", app_ref=self)
         self.workout_screen = WorkoutScreen(name="workout", app_ref=self)
@@ -1183,7 +1383,7 @@ class IronCoachApp(App):
 
     def get_application_name(self):
         return "Iron Coach"
-    
-    
+
+
 if __name__ == "__main__":
     IronCoachApp().run()
