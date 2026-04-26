@@ -649,7 +649,6 @@ class SectionLabel(Label):
         self.color = ACCENT
         self.bold = True
         self.font_size = sp(11)
-        self.letter_spacing = 2
         self.size_hint_y = None
         self.height = dp(30)
         self.halign = "left"
@@ -803,7 +802,6 @@ class WorkoutScreen(Screen):
             color=ACCENT,
             bold=True,
             font_size=sp(13),
-            letter_spacing=2,
             size_hint_y=None,
             height=dp(28),
             halign="center",
